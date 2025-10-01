@@ -2,28 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import { ClientKeyRecord } from '../entities/ClientKeyRecord';
+import { CreateClientKeyDto } from 'src/dtos/CreateClientKeyDto';
+import { UpdateClientKeyDto } from 'src/dtos/UpdateClientKeyDto';
 
-export interface ClientKeyRecord {
-  id: number;
-  key: string;
-  name: string;
-  isActive: boolean;
-  revokedAt?: string | null;
-  note?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateClientKeyDto {
-  name: string;
-  note?: string;
-}
-
-export interface UpdateClientKeyDto {
-  name?: string;
-  isActive?: boolean;
-  note?: string;
-}
 
 @Injectable()
 export class ClientKeyService {

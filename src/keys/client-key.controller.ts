@@ -1,5 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
-import { ClientKeyService, CreateClientKeyDto, UpdateClientKeyDto } from './client-key.service';
+import { ClientKeyService } from './client-key.service';
+import type { CreateClientKeyDto } from '../dtos/CreateClientKeyDto';
+import type { UpdateClientKeyDto } from '../dtos/UpdateClientKeyDto';
 
 @Controller('admin/client-keys')
 export class ClientKeyController {
