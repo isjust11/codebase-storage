@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ClientResolverMiddleware } from './common/middleware/client-resolver.middleware';
 import { StorageModule } from './storage/storage.module';
+import { ClientKeyModule } from './keys/client-key.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { StorageModule } from './storage/storage.module';
       },
     }),
     StorageModule,
+    ClientKeyModule,
   ],
   controllers: [AppController],
   providers: [AppService],
