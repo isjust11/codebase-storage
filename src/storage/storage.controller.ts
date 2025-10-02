@@ -20,6 +20,18 @@ export class StorageController {
     return await this.storageService.saveBuffer(clientKey, safeName, file.buffer, file.mimetype);
   }
 
+  // upload file form data  
+  @Post('upload-form-data')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFormData(@UploadedFile() file: UploadedFileType, @Req() req: Request) {
+    const clientKey = (req as any).clientKey as string | undefined;
+    if (!clientKey) throw new BadRequestException('Missing client key');
+    if (!file) throw new BadRequestException('No file uploaded');
+    const safeName = path.basename(file.originalname);
+    return await this.storageService.saveBuffer(clientKey, safeName, file.buffer, file.mimetype);
+  }
+
+
   @Get('list')
   async list(@Req() req: Request) {
     const clientKey = (req as any).clientKey as string | undefined;

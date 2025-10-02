@@ -22,3 +22,10 @@ lerna-debug.log*
 # temp directory
 .temp
 .tmp
+
+# client keys
+client-keys.json
+
+# storage
+storage
+

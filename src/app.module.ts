@@ -13,14 +13,12 @@ import { ClientKeyModule } from './keys/client-key.module';
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
       validate: (config: Record<string, unknown>) => {
-        const schema = z
-          .object({
-            NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-            PORT: z.coerce.number().int().positive().default(3005),
-            STORAGE_ROOT: z.string().min(1).default('storage'),
-            CLIENT_HEADER_KEY: z.string().min(1).default('x-client-key'),
-          })
-          .strict();
+        const schema = z.object({
+          NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+          // PORT: z.coerce.number().int().positive().default(3005),
+          STORAGE_ROOT: z.string().min(1).default('storage'),
+          CLIENT_HEADER_KEY: z.string().min(1).default('x-client-key'),
+        });
         const result = schema.safeParse(config);
         if (!result.success) {
           throw new Error(`Invalid environment variables: ${result.error.message}`);
@@ -28,7 +26,7 @@ import { ClientKeyModule } from './keys/client-key.module';
         return {
           ...config,
           NODE_ENV: result.data.NODE_ENV,
-          PORT: result.data.PORT.toString(),
+          // PORT: result.data.PORT.toString(),
           STORAGE_ROOT: result.data.STORAGE_ROOT,
           CLIENT_HEADER_KEY: result.data.CLIENT_HEADER_KEY,
         } as Record<string, string>;
@@ -42,6 +40,8 @@ import { ClientKeyModule } from './keys/client-key.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(ClientResolverMiddleware).forRoutes('*');
+    consumer.apply(ClientResolverMiddleware)
+    .exclude('admin/client-keys/(.*)')
+    .forRoutes('*');
   }
 }
