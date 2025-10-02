@@ -69,8 +69,7 @@ export class StorageService {
       originalName,
       size: stats.size,
       mimeType,
-      url: `/storage/file/${encodeURIComponent(uniqueFilename)}`,
-      uploadedAt,
+      url: `/storage/${encodeURIComponent(filename)}`,
     };
   }
 
