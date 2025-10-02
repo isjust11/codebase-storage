@@ -69,7 +69,8 @@ export class StorageService {
       originalName,
       size: stats.size,
       mimeType,
-      url: `/storage/${encodeURIComponent(filename)}`,
+      url: `/storage/file/${encodeURIComponent(uniqueFilename)}`,
+      uploadedAt,
     };
   }
 
@@ -91,7 +92,7 @@ export class StorageService {
           originalName,
           size: stats.size, 
           mimeType: 'application/octet-stream', 
-          url: `/storage/${encodeURIComponent(filename)}`,
+          url: `/storage/file/${encodeURIComponent(filename)}`,
           uploadedAt: stats.birthtime
         });
       }
