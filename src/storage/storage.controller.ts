@@ -16,8 +16,8 @@ export class StorageController {
     const clientKey = (req as any).clientKey as string | undefined;
     if (!clientKey) throw new BadRequestException('Missing client key');
     if (!file) throw new BadRequestException('No file uploaded');
-    const safeName = path.basename(file.originalname);
-    return await this.storageService.saveBuffer(clientKey, safeName, file.buffer, file.mimetype);
+    const originalName = path.basename(file.originalname);
+    return await this.storageService.saveBuffer(clientKey, originalName, file.buffer, file.mimetype);
   }
 
   // upload file form data  
@@ -27,8 +27,8 @@ export class StorageController {
     const clientKey = (req as any).clientKey as string | undefined;
     if (!clientKey) throw new BadRequestException('Missing client key');
     if (!file) throw new BadRequestException('No file uploaded');
-    const safeName = path.basename(file.originalname);
-    return await this.storageService.saveBuffer(clientKey, safeName, file.buffer, file.mimetype);
+    const originalName = path.basename(file.originalname);
+    return await this.storageService.saveBuffer(clientKey, originalName, file.buffer, file.mimetype);
   }
 
 
@@ -39,7 +39,7 @@ export class StorageController {
     return this.storageService.listFiles(clientKey);
   }
 
-  @Get(':filename')
+  @Get('file/:filename')
   async get(@Param('filename') filename: string, @Req() req: Request, @Res() res: Response) {
     const clientKey = (req as any).clientKey as string | undefined;
     if (!clientKey) throw new BadRequestException('Missing client key');
@@ -48,12 +48,19 @@ export class StorageController {
     stream.pipe(res);
   }
 
-  @Delete(':filename')
+  @Delete('file/:filename')
   async remove(@Param('filename') filename: string, @Req() req: Request) {
     const clientKey = (req as any).clientKey as string | undefined;
     if (!clientKey) throw new BadRequestException('Missing client key');
     await this.storageService.deleteFile(clientKey, path.basename(filename));
     return { success: true };
+  }
+
+  @Get('statistics')
+  async getStatistics(@Req() req: Request) {
+    const clientKey = (req as any).clientKey as string | undefined;
+    if (!clientKey) throw new BadRequestException('Missing client key');
+    return this.storageService.getFileStatistics(clientKey);
   }
 }
 
