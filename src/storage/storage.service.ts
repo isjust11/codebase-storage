@@ -11,6 +11,7 @@ export interface StoredFile {
   mimeType: string;
   url: string;
   uploadedAt: Date;
+  publicUrl: string;
 }
 
 export interface FileStatistics {
@@ -70,6 +71,7 @@ export class StorageService {
       size: stats.size,
       mimeType,
       url: `/storage/file/${encodeURIComponent(uniqueFilename)}`,
+      publicUrl: `/${process.env.STORAGE_ROOT}/${clientKey}/${uniqueFilename}`,
       uploadedAt,
     };
   }
@@ -93,6 +95,7 @@ export class StorageService {
           size: stats.size,
           mimeType: 'application/octet-stream',
           url: `/storage/file/${encodeURIComponent(filename)}`,
+          publicUrl: `/${process.env.STORAGE_ROOT}/${clientKey}/${filename}`,
           uploadedAt: stats.birthtime
         });
       }
