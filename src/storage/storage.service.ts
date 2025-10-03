@@ -51,7 +51,7 @@ export class StorageService {
     const uniqueId = randomUUID().substring(0, 8);
     const ext = path.extname(originalName);
     const nameWithoutExt = path.basename(originalName, ext);
-    
+
     // Tạo tên file với format: timestamp_uniqueId_originalName.ext
     return `${timestamp}_${uniqueId}_${nameWithoutExt}${ext}`;
   }
@@ -63,7 +63,7 @@ export class StorageService {
     await fs.writeFile(filePath, buffer);
     const stats = await fs.stat(filePath);
     const uploadedAt = new Date();
-    
+
     return {
       filename: uniqueFilename,
       originalName,
@@ -83,15 +83,15 @@ export class StorageService {
         const filePath = path.join(dir, filename);
         const stats = await fs.stat(filePath);
         if (!stats.isFile()) continue;
-        
+
         // Parse original name from filename (format: timestamp_uniqueId_originalName.ext)
         const originalName = this.parseOriginalName(filename);
-        
-        results.push({ 
-          filename, 
+
+        results.push({
+          filename,
           originalName,
-          size: stats.size, 
-          mimeType: 'application/octet-stream', 
+          size: stats.size,
+          mimeType: 'application/octet-stream',
           url: `/storage/file/${encodeURIComponent(filename)}`,
           uploadedAt: stats.birthtime
         });
@@ -132,9 +132,29 @@ export class StorageService {
     }
   }
 
+  async getFileInfo(clientKey: string, filename: string): Promise<any> {
+    try {
+      const filePath = path.join(this.resolveClientDir(clientKey), filename);
+      const stats = await fs.stat(filePath);
+      const originalName = this.parseOriginalName(filename);
+      return {
+        filename,
+        originalName: originalName,
+        size: stats.size,
+        mimeType: 'application/octet-stream',
+        url: `/storage/file/${encodeURIComponent(filename)}`,
+        publicUrl: `/${process.env.STORAGE_ROOT}/${clientKey}/${filename}`,
+        uploadedAt: stats.birthtime
+      };
+    } catch (error) {
+      throw new NotFoundException('File not found');
+    }
+  }
+
+
   async getFileStatistics(clientKey: string): Promise<FileStatistics> {
     const files = await this.listFiles(clientKey);
-    
+
     if (files.length === 0) {
       return {
         totalFiles: 0,
@@ -156,7 +176,7 @@ export class StorageService {
     // Thống kê theo loại file
     files.forEach(file => {
       const fileType = this.getFileTypeFromMimeType(file.mimeType);
-      
+
       if (!fileTypes[fileType]) {
         fileTypes[fileType] = {
           count: 0,
@@ -164,7 +184,7 @@ export class StorageService {
           percentage: 0
         };
       }
-      
+
       fileTypes[fileType].count++;
       fileTypes[fileType].totalSize += file.size;
     });

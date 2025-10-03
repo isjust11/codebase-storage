@@ -48,6 +48,14 @@ export class StorageController {
     stream.pipe(res);
   }
 
+  @Get('file-info/:filename')
+  async getFileInfo(@Param('filename') filename: string, @Req() req: Request) {
+    const clientKey = (req as any).clientKey as string | undefined;
+    if (!clientKey) throw new BadRequestException('Missing client key');
+    const filePath = await this.storageService.getFileInfo(clientKey, path.basename(filename));
+    return filePath;
+  }
+
   @Delete('file/:filename')
   async remove(@Param('filename') filename: string, @Req() req: Request) {
     const clientKey = (req as any).clientKey as string | undefined;
