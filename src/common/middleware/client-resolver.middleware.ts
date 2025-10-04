@@ -16,6 +16,11 @@ export class ClientResolverMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     const headerKey = this.configService.get<string>('CLIENT_HEADER_KEY') || 'x-client-key';
     const clientKey = (req.headers[headerKey] as string) || (req.query.client as string);
+    const requestUrl = req.baseUrl;
+    if(requestUrl.includes('admin/client-keys') || requestUrl.includes(`${process.env.STORAGE_ROOT}/(.*)`)) {
+      next();
+      return;
+    }
     if (!clientKey) {
       throw new BadRequestException(`Missing client identifier. Provide header '${headerKey}' or query 'client'.`);
     }
