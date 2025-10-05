@@ -13,6 +13,7 @@ async function bootstrap() {
   app.useStaticAssets(join(process.cwd(), 'storage-data'), {
     prefix: `/storage-data/`,
   });
-  await app.listen(port);
+  console.log('Storage service is running on port:', port);
+  await app.listen(port, '0.0.0.0');
 }
 bootstrap();

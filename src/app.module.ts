@@ -41,8 +41,8 @@ import { ClientKeyModule } from './keys/client-key.module';
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(ClientResolverMiddleware)
-    .exclude('admin/client-keys/**')
-    .exclude(`${process.env.STORAGE_ROOT}/**`)
+    .exclude('admin/client-keys/(.*)')
+    .exclude(`${process.env.STORAGE_ROOT}/(.*)`)
     .forRoutes('*');
   }
 }
