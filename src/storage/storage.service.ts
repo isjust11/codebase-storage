@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
+import * as mime from 'mime-types';
 
 export interface StoredFile {
   filename: string;
@@ -93,7 +94,7 @@ export class StorageService {
           filename,
           originalName,
           size: stats.size,
-          mimeType: 'application/octet-stream',
+          mimeType: this.getMimeType(filename),
           url: `/storage/file/${encodeURIComponent(filename)}`,
           publicUrl: `/${process.env.STORAGE_ROOT}/${clientKey}/${filename}`,
           uploadedAt: stats.birthtime
@@ -103,6 +104,11 @@ export class StorageService {
     } catch (err) {
       return [];
     }
+  }
+
+  private getMimeType(filename: string): string {
+    const ext = path.extname(filename);
+    return mime.lookup(ext) || 'application/octet-stream';
   }
 
   private parseOriginalName(filename: string): string {
@@ -144,7 +150,7 @@ export class StorageService {
         filename,
         originalName: originalName,
         size: stats.size,
-        mimeType: 'application/octet-stream',
+        mimeType: this.getMimeType(filename),
         url: `/storage/file/${encodeURIComponent(filename)}`,
         publicUrl: `/${process.env.STORAGE_ROOT}/${clientKey}/${filename}`,
         uploadedAt: stats.birthtime
