@@ -58,21 +58,20 @@ export class StorageService {
     return `${timestamp}_${uniqueId}_${nameWithoutExt}${ext}`;
   }
 
-  async saveBuffer(clientKey: string, originalName: string, buffer: Buffer, mimeType: string): Promise<StoredFile> {
+  async saveBuffer(clientKey: string, originalName: string, buffer: Buffer, mimeType: string, createById?: string): Promise<StoredFile> {
     const dir = await this.ensureClientDir(clientKey);
     const uniqueFilename = this.generateUniqueFilename(originalName);
-    const filePath = path.join(dir, uniqueFilename);
+    const filePath = path.join(dir, createById ? `${createById}/` : '', uniqueFilename);
     await fs.writeFile(filePath, buffer);
     const stats = await fs.stat(filePath);
     const uploadedAt = new Date();
-
     return {
       filename: uniqueFilename,
       originalName,
       size: stats.size,
       mimeType,
       url: `/storage/file/${encodeURIComponent(uniqueFilename)}`,
-      publicUrl: `/${process.env.STORAGE_ROOT}/${clientKey}/${uniqueFilename}`,
+      publicUrl: `/${process.env.STORAGE_ROOT}/${clientKey}/${createById ? `${createById}/` : ''}${uniqueFilename}`,
       uploadedAt,
     };
   }

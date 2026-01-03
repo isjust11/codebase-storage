@@ -2,7 +2,8 @@ import { Controller, Get, Post, Delete, Param,
    UploadedFile, UseInterceptors, Req, Res, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
-type UploadedFileType = { originalname: string; buffer: Buffer; mimetype: string };
+type UploadedFileType = { originalname: string; buffer: Buffer; mimetype: string,
+   subDirectory?: string , createById?: string,};
 import * as path from 'path';
 import * as fs from 'fs';
 import { StorageService } from './storage.service';
@@ -17,7 +18,7 @@ export class StorageController {
     if (!clientKey) throw new BadRequestException('Missing client key');
     if (!file) throw new BadRequestException('No file uploaded');
     const originalName = path.basename(file.originalname);
-    return await this.storageService.saveBuffer(clientKey, originalName, file.buffer, file.mimetype);
+    return await this.storageService.saveBuffer(clientKey, originalName, file.buffer, file.mimetype, file.createById);
   }
 
   // upload file form data  
