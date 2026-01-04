@@ -18,7 +18,9 @@ export class StorageController {
     if (!clientKey) throw new BadRequestException('Missing client key');
     if (!file) throw new BadRequestException('No file uploaded');
     const originalName = path.basename(file.originalname);
-    return await this.storageService.saveBuffer(clientKey, originalName, file.buffer, file.mimetype, file.createById);
+    // Extract createById from request body (form data)
+    const createById = (req.body && req.body.createById) ? req.body.createById : undefined;
+    return await this.storageService.saveBuffer(clientKey, originalName, file.buffer, file.mimetype, createById);
   }
 
   // upload file form data  
@@ -40,28 +42,31 @@ export class StorageController {
     return this.storageService.listFiles(clientKey);
   }
 
-  @Get('file/:filename')
-  async get(@Param('filename') filename: string, @Req() req: Request, @Res() res: Response) {
+  @Get('file/*path')
+  async get(@Param('path') path: string, @Req() req: Request, @Res() res: Response) {
     const clientKey = (req as any).clientKey as string | undefined;
     if (!clientKey) throw new BadRequestException('Missing client key');
-    const filePath = await this.storageService.getFilePath(clientKey, path.basename(filename));
+    // Decode path (may include userId path like "userId/filename.ext")
+    const decodedPath = decodeURIComponent(path);
+    const filePath = await this.storageService.getFilePath(clientKey, decodedPath);
     const stream = fs.createReadStream(filePath);
     stream.pipe(res);
   }
 
-  @Get('file-info/:filename')
-  async getFileInfo(@Param('filename') filename: string, @Req() req: Request) {
+  @Get('file-info/*path')
+  async getFileInfo(@Param('path') path: string, @Req() req: Request) {
     const clientKey = (req as any).clientKey as string | undefined;
     if (!clientKey) throw new BadRequestException('Missing client key');
-    const filePath = await this.storageService.getFileInfo(clientKey, path.basename(filename));
-    return filePath;
+    const decodedPath = decodeURIComponent(path);
+    return await this.storageService.getFileInfo(clientKey, decodedPath);
   }
 
-  @Delete('file/:filename')
-  async remove(@Param('filename') filename: string, @Req() req: Request) {
+  @Delete('file/*path')
+  async remove(@Param('path') path: string, @Req() req: Request) {
     const clientKey = (req as any).clientKey as string | undefined;
     if (!clientKey) throw new BadRequestException('Missing client key');
-    await this.storageService.deleteFile(clientKey, path.basename(filename));
+    const decodedPath = decodeURIComponent(path);
+    await this.storageService.deleteFile(clientKey, decodedPath);
     return { success: true };
   }
 

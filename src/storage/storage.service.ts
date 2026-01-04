@@ -59,45 +59,84 @@ export class StorageService {
   }
 
   async saveBuffer(clientKey: string, originalName: string, buffer: Buffer, mimeType: string, createById?: string): Promise<StoredFile> {
-    const dir = await this.ensureClientDir(clientKey);
+    const clientDir = await this.ensureClientDir(clientKey);
     const uniqueFilename = this.generateUniqueFilename(originalName);
-    const filePath = path.join(dir, createById ? `${createById}/` : '', uniqueFilename);
+    
+    // If createById is provided, create user-specific directory structure
+    let targetDir = clientDir;
+    if (createById) {
+      targetDir = path.join(clientDir, createById);
+      await fs.mkdir(targetDir, { recursive: true });
+    }
+    
+    const filePath = path.join(targetDir, uniqueFilename);
     await fs.writeFile(filePath, buffer);
     const stats = await fs.stat(filePath);
     const uploadedAt = new Date();
+    
+    // Build relative path for URL (includes userId if present)
+    const relativePath = createById ? `${createById}/${uniqueFilename}` : uniqueFilename;
+    
     return {
       filename: uniqueFilename,
       originalName,
       size: stats.size,
       mimeType,
-      url: `/storage/file/${encodeURIComponent(uniqueFilename)}`,
-      publicUrl: `/${process.env.STORAGE_ROOT}/${clientKey}/${createById ? `${createById}/` : ''}${uniqueFilename}`,
+      url: `/storage/file/${encodeURIComponent(relativePath)}`,
+      publicUrl: `/${this.storageRoot}/${clientKey}/${relativePath}`,
       uploadedAt,
     };
   }
 
   async listFiles(clientKey: string): Promise<StoredFile[]> {
     const dir = this.resolveClientDir(clientKey);
+    const results: StoredFile[] = [];
+    
     try {
-      const files = await fs.readdir(dir);
-      const results: StoredFile[] = [];
-      for (const filename of files) {
-        const filePath = path.join(dir, filename);
-        const stats = await fs.stat(filePath);
-        if (!stats.isFile()) continue;
-
-        // Parse original name from filename (format: timestamp_uniqueId_originalName.ext)
-        const originalName = this.parseOriginalName(filename);
-
-        results.push({
-          filename,
-          originalName,
-          size: stats.size,
-          mimeType: this.getMimeType(filename),
-          url: `/storage/file/${encodeURIComponent(filename)}`,
-          publicUrl: `/${process.env.STORAGE_ROOT}/${clientKey}/${filename}`,
-          uploadedAt: stats.birthtime
-        });
+      const entries = await fs.readdir(dir);
+      
+      for (const entry of entries) {
+        const entryPath = path.join(dir, entry);
+        const stats = await fs.stat(entryPath);
+        
+        if (stats.isFile()) {
+          // File in root directory
+          const originalName = this.parseOriginalName(entry);
+          results.push({
+            filename: entry,
+            originalName,
+            size: stats.size,
+            mimeType: this.getMimeType(entry),
+            url: `/storage/file/${encodeURIComponent(entry)}`,
+            publicUrl: `/${this.storageRoot}/${clientKey}/${entry}`,
+            uploadedAt: stats.birthtime
+          });
+        } else if (stats.isDirectory()) {
+          // Directory (likely user directory), list files inside
+          try {
+            const userFiles = await fs.readdir(entryPath);
+            for (const userFile of userFiles) {
+              const userFilePath = path.join(entryPath, userFile);
+              const userFileStats = await fs.stat(userFilePath);
+              if (userFileStats.isFile()) {
+                const relativePath = `${entry}/${userFile}`;
+                const originalName = this.parseOriginalName(userFile);
+                results.push({
+                  filename: userFile,
+                  originalName,
+                  size: userFileStats.size,
+                  mimeType: this.getMimeType(userFile),
+                  url: `/storage/file/${encodeURIComponent(relativePath)}`,
+                  publicUrl: `/${this.storageRoot}/${clientKey}/${relativePath}`,
+                  uploadedAt: userFileStats.birthtime
+                });
+              }
+            }
+          } catch (err) {
+            // Skip directory if can't read
+            continue;
+          }
+        }
       }
       return results;
     } catch (err) {
@@ -121,18 +160,53 @@ export class StorageService {
   }
 
   async getFilePath(clientKey: string, filename: string): Promise<string> {
-    const filePath = path.join(this.resolveClientDir(clientKey), filename);
+    const clientDir = this.resolveClientDir(clientKey);
+    
+    // Try direct path first (for backward compatibility)
+    let filePath = path.join(clientDir, filename);
     try {
       const stats = await fs.stat(filePath);
-      if (!stats.isFile()) throw new Error('Not a file');
+      if (stats.isFile()) return filePath;
     } catch {
-      throw new NotFoundException('File not found');
+      // File not found at direct path, continue searching
     }
-    return filePath;
+    
+    // If filename contains path separator, try that path
+    if (filename.includes('/')) {
+      filePath = path.join(clientDir, filename);
+      try {
+        const stats = await fs.stat(filePath);
+        if (stats.isFile()) return filePath;
+      } catch {
+        // Continue to search in subdirectories
+      }
+    }
+    
+    // Search in user subdirectories
+    try {
+      const entries = await fs.readdir(clientDir);
+      for (const entry of entries) {
+        const entryPath = path.join(clientDir, entry);
+        const stats = await fs.stat(entryPath);
+        if (stats.isDirectory()) {
+          const potentialPath = path.join(entryPath, filename);
+          try {
+            const fileStats = await fs.stat(potentialPath);
+            if (fileStats.isFile()) return potentialPath;
+          } catch {
+            // Continue searching
+          }
+        }
+      }
+    } catch {
+      // Directory read error
+    }
+    
+    throw new NotFoundException('File not found');
   }
 
   async deleteFile(clientKey: string, filename: string): Promise<void> {
-    const filePath = path.join(this.resolveClientDir(clientKey), filename);
+    const filePath = await this.getFilePath(clientKey, filename);
     try {
       await fs.unlink(filePath);
     } catch {
@@ -142,16 +216,21 @@ export class StorageService {
 
   async getFileInfo(clientKey: string, filename: string): Promise<any> {
     try {
-      const filePath = path.join(this.resolveClientDir(clientKey), filename);
+      const filePath = await this.getFilePath(clientKey, filename);
       const stats = await fs.stat(filePath);
-      const originalName = this.parseOriginalName(filename);
+      const originalName = this.parseOriginalName(path.basename(filename));
+      
+      // Extract relative path from filePath for publicUrl
+      const clientDir = this.resolveClientDir(clientKey);
+      const relativePath = path.relative(clientDir, filePath).replace(/\\/g, '/');
+      
       return {
-        filename,
+        filename: path.basename(filename),
         originalName: originalName,
         size: stats.size,
         mimeType: this.getMimeType(filename),
-        url: `/storage/file/${encodeURIComponent(filename)}`,
-        publicUrl: `/${process.env.STORAGE_ROOT}/${clientKey}/${filename}`,
+        url: `/storage/file/${encodeURIComponent(relativePath)}`,
+        publicUrl: `/${this.storageRoot}/${clientKey}/${relativePath}`,
         uploadedAt: stats.birthtime
       };
     } catch (error) {
